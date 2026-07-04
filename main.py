@@ -1,69 +1,88 @@
-import string
-import requests
-from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor
-import matplotlib.pyplot as plt
+import random
+import math
 
-def get_text(url):
-    response = requests.get(url)
-    response.raise_for_status()
-    return response.text
+def sphere_function(x):
+    return sum(xi ** 2 for xi in x)
 
-def remove_punctuation(text):
-    return text.translate(str.maketrans("", "", string.punctuation))
+def hill_climbing(func, bounds, iterations=1000, epsilon=1e-6):
+    n = len(bounds)
+    current_x = [random.uniform(b[0], b[1]) for b in bounds]
+    current_value = func(current_x)
+    step_size = 0.1
 
-def map_function(words_chunk):
-    return [(word, 1) for word in words_chunk]
-
-def shuffle_function(mapped_values):
-    shuffled = defaultdict(list)
-    for key, value in mapped_values:
-        shuffled[key].append(value)
-    return shuffled.items()
-
-def reduce_function(key_values):
-    key, values = key_values
-    return key, sum(values)
-
-def map_reduce(text, num_workers=4):
-    text = remove_punctuation(text).lower()
-    words = text.split()
-    
-    chunk_size = max(1, len(words) // num_workers)
-    chunks = [words[i:i + chunk_size] for i in range(0, len(words), chunk_size)]
-    
-    mapped_values = []
-    with ThreadPoolExecutor(max_workers=num_workers) as executor:
-        results = executor.map(map_function, chunks)
-        for result in results:
-            mapped_values.extend(result)
-            
-    shuffled_values = shuffle_function(mapped_values)
-    
-    with ThreadPoolExecutor(max_workers=num_workers) as executor:
-        reduced_values = list(executor.map(reduce_function, shuffled_values))
+    for _ in range(iterations):
+        neighbor_x = [
+            min(max(current_x[i] + random.uniform(-step_size, step_size), bounds[i][0]), bounds[i][1])
+            for i in range(n)
+        ]
+        neighbor_value = func(neighbor_x)
         
-    return dict(reduced_values)
+        if neighbor_value < current_value:
+            value_diff = abs(current_value - neighbor_value)
+            pos_diff = sum((neighbor_x[i] - current_x[i])**2 for i in range(n))**0.5
+            
+            current_x, current_value = neighbor_x, neighbor_value
+            
+            if value_diff < epsilon or pos_diff < epsilon:
+                break
 
-def visualize_top_words(word_counts, top_n=10):
-    sorted_word_counts = sorted(word_counts.items(), key=lambda item: item[1], reverse=True)[:top_n]
-    
-    words = [item[0] for item in sorted_word_counts]
-    counts = [item[1] for item in sorted_word_counts]
-    
-    plt.figure(figsize=(10, 6))
-    plt.barh(words[::-1], counts[::-1], color='skyblue')
-    plt.xlabel('Frequency')
-    plt.ylabel('Words')
-    plt.title(f'Top {top_n} Most Frequent Words')
-    plt.tight_layout()
-    plt.show()
+    return current_x, current_value
 
-if __name__ == '__main__':
-    url = "https://gutenberg.net.au/ebooks01/0100021.txt"
-    try:
-        text = get_text(url)
-        word_counts = map_reduce(text)
-        visualize_top_words(word_counts, top_n=10)
-    except Exception as e:
-        print(f"Error: {e}")
+def random_local_search(func, bounds, iterations=1000, epsilon=1e-6):
+    n = len(bounds)
+    current_x = [random.uniform(b[0], b[1]) for b in bounds]
+    current_value = func(current_x)
+    
+    for _ in range(iterations):
+        neighbor_x = [random.uniform(b[0], b[1]) for b in bounds]
+        neighbor_value = func(neighbor_x)
+        
+        if neighbor_value < current_value:
+            value_diff = abs(current_value - neighbor_value)
+            pos_diff = sum((neighbor_x[i] - current_x[i])**2 for i in range(n))**0.5
+            
+            current_x, current_value = neighbor_x, neighbor_value
+            
+            if value_diff < epsilon or pos_diff < epsilon:
+                break
+                
+    return current_x, current_value
+
+def simulated_annealing(func, bounds, iterations=1000, temp=1000, cooling_rate=0.95, epsilon=1e-6):
+    n = len(bounds)
+    current_x = [random.uniform(b[0], b[1]) for b in bounds]
+    current_value = func(current_x)
+    
+    for _ in range(iterations):
+        if temp < epsilon:
+            break
+            
+        neighbor_x = [
+            min(max(current_x[i] + random.uniform(-0.5, 0.5), bounds[i][0]), bounds[i][1])
+            for i in range(n)
+        ]
+        neighbor_value = func(neighbor_x)
+        
+        delta = neighbor_value - current_value
+        
+        if delta < 0 or random.random() < math.exp(-delta / temp):
+            current_x, current_value = neighbor_x, neighbor_value
+            
+        temp *= cooling_rate
+        
+    return current_x, current_value
+
+if __name__ == "__main__":
+    bounds = [(-5, 5), (-5, 5)]
+
+    print("Hill Climbing:")
+    hc_solution, hc_value = hill_climbing(sphere_function, bounds)
+    print("Розв'язок:", hc_solution, "Значення:", hc_value)
+
+    print("\nRandom Local Search:")
+    rls_solution, rls_value = random_local_search(sphere_function, bounds)
+    print("Розв'язок:", rls_solution, "Значення:", rls_value)
+
+    print("\nSimulated Annealing:")
+    sa_solution, sa_value = simulated_annealing(sphere_function, bounds)
+    print("Розв'язок:", sa_solution, "Значення:", sa_value)

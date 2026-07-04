@@ -1,28 +1,34 @@
 import unittest
-from main import remove_punctuation, map_function, shuffle_function, reduce_function
+from main import sphere_function, hill_climbing, random_local_search, simulated_annealing
 
-class TestMapReduce(unittest.TestCase):
-    def test_remove_punctuation(self):
-        text = "Hello, World! This is a test."
-        expected = "Hello World This is a test"
-        self.assertEqual(remove_punctuation(text), expected)
+class TestOptimizationAlgorithms(unittest.TestCase):
+    def setUp(self):
+        self.bounds = [(-5, 5), (-5, 5)]
 
-    def test_map_function(self):
-        words = ["hello", "world", "hello"]
-        expected = [("hello", 1), ("world", 1), ("hello", 1)]
-        self.assertEqual(map_function(words), expected)
+    def test_sphere_function(self):
+        self.assertEqual(sphere_function([0, 0]), 0)
+        self.assertEqual(sphere_function([2, 3]), 13)
 
-    def test_shuffle_function(self):
-        mapped_values = [("hello", 1), ("world", 1), ("hello", 1)]
-        shuffled = list(shuffle_function(mapped_values))
-        shuffled_dict = {k: v for k, v in shuffled}
-        self.assertEqual(shuffled_dict["hello"], [1, 1])
-        self.assertEqual(shuffled_dict["world"], [1])
+    def test_hill_climbing(self):
+        solution, value = hill_climbing(sphere_function, self.bounds)
+        self.assertEqual(len(solution), 2)
+        for i in range(2):
+            self.assertTrue(-5 <= solution[i] <= 5)
+        self.assertGreaterEqual(value, 0)
 
-    def test_reduce_function(self):
-        key_values = ("hello", [1, 1, 1])
-        expected = ("hello", 3)
-        self.assertEqual(reduce_function(key_values), expected)
+    def test_random_local_search(self):
+        solution, value = random_local_search(sphere_function, self.bounds)
+        self.assertEqual(len(solution), 2)
+        for i in range(2):
+            self.assertTrue(-5 <= solution[i] <= 5)
+        self.assertGreaterEqual(value, 0)
 
-if __name__ == '__main__':
+    def test_simulated_annealing(self):
+        solution, value = simulated_annealing(sphere_function, self.bounds)
+        self.assertEqual(len(solution), 2)
+        for i in range(2):
+            self.assertTrue(-5 <= solution[i] <= 5)
+        self.assertGreaterEqual(value, 0)
+
+if __name__ == "__main__":
     unittest.main()
